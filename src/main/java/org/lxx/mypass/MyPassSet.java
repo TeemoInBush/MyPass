@@ -8,9 +8,6 @@
  */
 package org.lxx.mypass;
 
-import org.apache.commons.codec.digest.HmacAlgorithms;
-import org.apache.commons.codec.digest.HmacUtils;
-import org.lxx.mypass.aes.GcmCipher;
 import org.lxx.mypass.repository.ObjectDAO;
 
 import java.awt.*;
@@ -18,9 +15,7 @@ import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
 import java.io.Console;
-import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
 
@@ -35,19 +30,21 @@ public class MyPassSet {
     public static final String LINE = "----------------------------";
     public static final String FILE_NAME = "PASS_SET.txt";
     private static final ObjectDAO DAO = new ObjectDAO("");
-    public static final MyPassSet INSTANCE = new MyPassSet();
 
     private final List<OnePass> passSet = Optional.ofNullable(DAO.<List<OnePass>>getObject(FILE_NAME)).orElse(new ArrayList<>());
 
     public void add(String param) {
-        String[] args = getArgs(param, 3);
+        String[] args = getArgs(param, 4);
         if (args == null) {
             return;
         }
-        OnePass onePass = new OnePass();
-        onePass.setName(args[0]);
-        onePass.setLength(Integer.parseInt(args[1]));
-        onePass.setDesc(args[2]);
+        String name = args[0];
+        OnePass password = getPassword(name);
+        if (password != null) {
+            System.out.println(name + " already exists!");
+            return;
+        }
+        OnePass onePass = new OnePass(args[0], Integer.parseInt(args[1]), Integer.parseInt(args[2]), args[3]);
         passSet.add(onePass);
 
         System.out.println(LINE);
@@ -61,7 +58,7 @@ public class MyPassSet {
         System.out.println(LINE);
         for (int i = 0; i < passSet.size(); i++) {
             OnePass onePass = passSet.get(i);
-            System.out.printf("%d - %s %s\n", i, onePass.getName(), onePass.getDesc());
+            System.out.printf("%d - %s\n", i, onePass.print());
         }
         System.out.println(LINE);
     }
@@ -72,20 +69,21 @@ public class MyPassSet {
             return;
         }
         Console cons = System.console();
-        if(cons == null){
+        if (cons == null) {
             System.out.println("Couldn't get Console instance, maybe you're running this from within an IDE?");
             System.exit(0);
         }
         int index = Integer.parseInt(args[0]);
+        System.out.println(LINE);
         String secret = new String(cons.readPassword("input password:"));
         OnePass onePass = passSet.get(index);
 
         try {
-            String encoded = hash(secret, onePass.getName());
+            String password = onePass.getPassword(secret);
             // 获取系统剪贴板
             Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             // 封装文本内容
-            Transferable trans = new StringSelection(encoded.substring(0, onePass.getLength()));
+            Transferable trans = new StringSelection(password);
             // 把文本内容设置到系统剪贴板
             clipboard.setContents(trans, null);
 
@@ -95,16 +93,6 @@ public class MyPassSet {
         } catch (Exception e) {
             e.printStackTrace();
         }
-    }
-
-    private String gcm(String secret, String content) throws NoSuchAlgorithmException {
-        GcmCipher gcmCipher = new GcmCipher(secret);
-        return gcmCipher.encrypt(content);
-    }
-
-    private String hash(String secret, String content) {
-        byte[] bytes = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secret).hmac(content);
-        return Base64.getEncoder().encodeToString(bytes);
     }
 
     public void delete(String param) {
@@ -120,6 +108,18 @@ public class MyPassSet {
         list("");
         DAO.saveObject(passSet, FILE_NAME);
     }
+
+
+    public void update(String param) {
+        String[] args = getArgs(param, 4);
+        if (args == null) {
+            return;
+        }
+        String name = args[0];
+        delete(name);
+        add(param);
+    }
+
 
     private OnePass getPassword(String name) {
         for (OnePass onePass : passSet) {
