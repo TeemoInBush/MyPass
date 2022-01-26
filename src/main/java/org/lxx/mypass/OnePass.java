@@ -27,6 +27,7 @@ public class OnePass implements Serializable {
     private static final long serialVersionUID = 1;
     public static final Pattern NUM_PATTERN = Pattern.compile("[0-9]");
     public static final Pattern CHAT_PATTERN = Pattern.compile("[A-z]");
+    public static final Pattern SYMBOL_PATTERN = Pattern.compile("[^0-9A-z]");
 
     private final String name;
 
@@ -65,7 +66,7 @@ public class OnePass implements Serializable {
         HmacUtils hmacUtils = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secret);
         do {
             byte[] bytes = hmacUtils.hmac(name + password);
-            password =  Base64.getEncoder().encodeToString(bytes).replace("+", "").substring(0, length);
+            password =  Base64.getEncoder().encodeToString(bytes).substring(0, length).replaceAll("[^0-9A-z]", "");
         } while (!NUM_PATTERN.matcher(password).find() || !CHAT_PATTERN.matcher(password).find());
         return password;
     }
@@ -74,7 +75,7 @@ public class OnePass implements Serializable {
         StringBuilder password = new StringBuilder();
         byte[] bytes = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secret).hmac(name);
         for (byte b : bytes) {
-            password.append(Math.abs(b % 100));
+            password.append(Math.abs(b % 10));
             if (password.length() >= length) {
                 break;
             }
@@ -83,16 +84,26 @@ public class OnePass implements Serializable {
     }
 
     private String getPasswordWithCharNumberAndSymbol(String secret) {
-        String password = getPasswordWithCharAndNumber(secret);
-        byte[] bytes = password.getBytes(StandardCharsets.UTF_8);
-        byte b = bytes[secret.length() % bytes.length];
-        int index = Math.abs(b) % bytes.length;
-        String result;
+        String password = "";
+        HmacUtils hmacUtils = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secret);
         do {
-            result = new StringBuilder(password).replace(index, index, "_").toString();
-            index = (index + 1) / bytes.length;
-        } while (!NUM_PATTERN.matcher(result).find() || !CHAT_PATTERN.matcher(result).find());
-        return result;
+            byte[] bytes = hmacUtils.hmac(name + password);
+            password =  Base64.getEncoder().encodeToString(bytes).substring(0, length).replace("+", "_");
+        } while (!NUM_PATTERN.matcher(password).find() || !CHAT_PATTERN.matcher(password).find() || !SYMBOL_PATTERN.matcher(password).find());
+        return password;
+    }
+
+    public static void main(String[] args) {
+        OnePass onePass = new OnePass("测试", 10, 2, "");
+        System.out.println(onePass.getPassword("aaa"));
+        System.out.println(onePass.getPassword("aaa"));
+        System.out.println(onePass.getPassword("aaa1"));
+        System.out.println(onePass.getPassword("aaa2"));
+        System.out.println(onePass.getPassword("aaa3"));
+        System.out.println(onePass.getPassword("aaa4"));
+        System.out.println(onePass.getPassword("aaa5"));
+        System.out.println(onePass.getPassword("aaa6"));
+        System.out.println(onePass.getPassword("aaa7"));
     }
 
     public String print() {
