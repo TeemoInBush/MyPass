@@ -10,10 +10,8 @@ package org.lxx.mypass.repository;
 
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
