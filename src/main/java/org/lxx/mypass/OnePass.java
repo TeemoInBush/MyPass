@@ -65,7 +65,7 @@ public class OnePass implements Serializable {
         HmacUtils hmacUtils = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secret);
         do {
             byte[] bytes = hmacUtils.hmac(name + password);
-            password =  Base64.getEncoder().encodeToString(bytes).substring(0, length).replaceAll("[^0-9A-z]", "");
+            password =  Base64.getEncoder().encodeToString(bytes).replaceAll("[^0-9A-z]", "").substring(0, length);
         } while (!NUM_PATTERN.matcher(password).find() || !CHAT_PATTERN.matcher(password).find());
         return password;
     }
@@ -87,8 +87,8 @@ public class OnePass implements Serializable {
         HmacUtils hmacUtils = new HmacUtils(HmacAlgorithms.HMAC_SHA_256, secret);
         do {
             byte[] bytes = hmacUtils.hmac(name + password);
-            password =  Base64.getEncoder().encodeToString(bytes).substring(0, length).replace("+", "_");
-        } while (!NUM_PATTERN.matcher(password).find() || !CHAT_PATTERN.matcher(password).find() || !SYMBOL_PATTERN.matcher(password).find());
+            password =  Base64.getEncoder().encodeToString(bytes).replace("+", "_").substring(0, length);
+        } while (!(NUM_PATTERN.matcher(password).find() && CHAT_PATTERN.matcher(password).find() && SYMBOL_PATTERN.matcher(password).find()));
         return password;
     }
 
