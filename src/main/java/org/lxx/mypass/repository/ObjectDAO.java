@@ -8,11 +8,17 @@
  */
 package org.lxx.mypass.repository;
 
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.reflect.TypeToken;
+import org.lxx.mypass.OnePass;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.nio.file.Paths;
+import java.util.List;
 
 /**
  * 持久化对象
@@ -22,6 +28,10 @@ import java.nio.file.Paths;
  **/
 public class ObjectDAO {
 
+    /**
+     * Gson配置下划线转驼峰，根据使用的Json工具设置
+     */
+    private static final Gson GSON = new GsonBuilder().create();
     private final String rootPath;
 
     public ObjectDAO(String rootPath) {
@@ -29,19 +39,19 @@ public class ObjectDAO {
         System.out.println("文件存储在：" + Paths.get(rootPath).toAbsolutePath());
     }
 
-    public <T> T getObject(String fileName) {
-        try (final FileInputStream fileInputStream = new FileInputStream(rootPath + fileName)) {
-            ObjectInputStream objectInputStream = new ObjectInputStream(fileInputStream);
-            return (T) objectInputStream.readObject();
+    public List<OnePass> getObject(String fileName) {
+        try (BufferedReader bufferedReader = new BufferedReader(new FileReader(rootPath + fileName))) {
+            String json = bufferedReader.readLine();
+            return GSON.fromJson(json, new TypeToken<List<OnePass>>() {}.getType());
         } catch (Exception e) {
             System.out.println("read file failed! " + e);
             return null;
         }
     }
 
-    public <T> void saveObject(T object, String fileName) {
-        try (ObjectOutputStream outputStream = new ObjectOutputStream(new FileOutputStream(rootPath + fileName))) {
-            outputStream.writeObject(object);
+    public void saveObject(List<OnePass> object, String fileName) {
+        try (BufferedWriter outputStream = new BufferedWriter(new FileWriter(rootPath + fileName))) {
+            outputStream.write(GSON.toJson(object));
         } catch (Exception e) {
             System.out.println("write file failed! " + e);
         }
